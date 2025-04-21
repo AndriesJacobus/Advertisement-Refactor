@@ -1,0 +1,12 @@
+﻿Refactor the AdvertisementService
+
+Goal: 
+- The current implementation works, but the quality of the implementation/code is very poor.
+- Find the problems, refactor it, make it better.
+- Use TDD, SOLID principles, Clean Code, etc.
+- We don't expect the new code to run, we would like to see how you approach refactoring, what are your thoughts about it. 
+
+Requirements:
+- The AdvertisementService must have a "public Advertisement GetAdvertisement(string id)" method -> This is the "Entry Point"
+- Modification of the ThirdParty project is not allowed (it's third party we must use it as it is)
+- Any other modifications like new classes, methods, tests, etc are welcome if/as required
