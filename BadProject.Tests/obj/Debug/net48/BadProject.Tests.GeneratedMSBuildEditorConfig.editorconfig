@@ -1,0 +1,5 @@
+is_global = true
+build_property.RootNamespace = BadProject.Tests
+build_property.ProjectDir = /Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/BadProject.Tests/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 

@@ -1,92 +1,139 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Runtime.Caching;
-using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using BadProject.Configuration;
+using BadProject.Core;
 using ThirdParty;
 
-namespace Adv
+namespace BadProject
 {
     public class AdvertisementService
     {
-        private static MemoryCache cache = new MemoryCache("");
-        private static Queue<DateTime> errors = new Queue<DateTime>();
+        private readonly IAdvertisementProviderFactory _providerFactory;
+        private readonly IAdvertisementCache _cache;
+        private readonly ICircuitBreaker _circuitBreaker;
+        private readonly ILogger<AdvertisementService> _logger;
+        private readonly AdvertisementServiceOptions _options;
 
-        private Object lockObj = new Object();
-        // **************************************************************************************************
-        // Loads Advertisement information by id
-        // from cache or if not possible uses the "mainProvider" or if not possible uses the "backupProvider"
-        // **************************************************************************************************
-        // Detailed Logic:
-        // 
-        // 1. Tries to use cache (and retuns the data or goes to STEP2)
-        //
-        // 2. If the cache is empty it uses the NoSqlDataProvider (mainProvider), 
-        //    in case of an error it retries it as many times as needed based on AppSettings
-        //    (returns the data if possible or goes to STEP3)
-        //
-        // 3. If it can't retrive the data or the ErrorCount in the last hour is more than 10, 
-        //    it uses the SqlDataProvider (backupProvider)
-        public Advertisement GetAdvertisement(string id)
+        public AdvertisementService(
+            IAdvertisementProviderFactory providerFactory,
+            IAdvertisementCache cache,
+            ICircuitBreaker circuitBreaker,
+            IOptions<AdvertisementServiceOptions> options,
+            ILogger<AdvertisementService> logger)
         {
-            Advertisement adv = null;
+            _providerFactory = providerFactory ?? throw new ArgumentNullException(nameof(providerFactory));
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _circuitBreaker = circuitBreaker ?? throw new ArgumentNullException(nameof(circuitBreaker));
+            if (options?.Value == null) throw new ArgumentNullException(nameof(options));
+            _options = options.Value;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
-            lock (lockObj)
+        public Advertisement? GetAdvertisement(string id)
+        {
+            return GetAdvertisementAsync(id).GetAwaiter().GetResult();
+        }
+
+        private async Task<Advertisement?> GetAdvertisementAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
             {
-                // Use Cache if available
-                adv = (Advertisement)cache.Get($"AdvKey_{id}");
-
-                // Count HTTP error timestamps in the last hour
-                while (errors.Count > 20) errors.Dequeue();
-                int errorCount = 0;
-                foreach (var dat in errors)
-                {
-                    if (dat > DateTime.Now.AddHours(-1))
-                    {
-                        errorCount++;
-                    }
-                }
-
-
-                // If Cache is empty and ErrorCount<10 then use HTTP provider
-                if ((adv == null) && (errorCount < 10))
-                {
-                    int retry = 0;
-                    do
-                    {
-                        retry++;
-                        try
-                        {
-                            var dataProvider = new NoSqlAdvProvider();
-                            adv = dataProvider.GetAdv(id);
-                        }
-                        catch
-                        {
-                            Thread.Sleep(1000);
-                            errors.Enqueue(DateTime.Now); // Store HTTP error timestamp              
-                        }
-                    } while ((adv == null) && (retry < int.Parse(ConfigurationManager.AppSettings["RetryCount"])));
-
-
-                    if (adv != null)
-                    {
-                        cache.Set($"AdvKey_{id}", adv, DateTimeOffset.Now.AddMinutes(5));
-                    }
-                }
-
-
-                // if needed try to use Backup provider
-                if (adv == null)
-                {
-                    adv = SQLAdvProvider.GetAdv(id);
-
-                    if (adv != null)
-                    {
-                        cache.Set($"AdvKey_{id}", adv, DateTimeOffset.Now.AddMinutes(5));
-                    }
-                }
+                throw new ArgumentException("Advertisement ID cannot be null or empty", nameof(id));
             }
-            return adv;
+
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("Advertisement ID cannot be whitespace", nameof(id));
+            }
+
+            try
+            {
+                // Try cache first
+                var cached = await _cache.GetAsync(id);
+                if (cached != null)
+                {
+                    _logger.LogDebug("Retrieved advertisement {Id} from cache", id);
+                    return cached;
+                }
+
+                // Check if primary provider is available
+                var usePrimary = await _circuitBreaker.IsAvailable();
+                Advertisement? advertisement;
+
+                if (usePrimary)
+                {
+                    try
+                    {
+                        var provider = _providerFactory.CreatePrimary();
+                        advertisement = await provider.GetAsync(id);
+
+                        if (advertisement != null)
+                        {
+                            await _circuitBreaker.RecordSuccess();
+                            await CacheAdvertisement(id, advertisement);
+                            return advertisement;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error fetching advertisement {Id} from primary provider", id);
+                        await _circuitBreaker.RecordFailure();
+                    }
+                }
+
+                // Try backup provider
+                try
+                {
+                    _logger.LogInformation(
+                        usePrimary
+                            ? "Primary provider failed to retrieve advertisement {Id}, trying backup provider"
+                            : "Circuit breaker is open, using backup provider for advertisement {Id}",
+                        id);
+
+                    var provider = _providerFactory.CreateBackup();
+                    advertisement = await provider.GetAsync(id);
+
+                    if (advertisement != null)
+                    {
+                        await CacheAdvertisement(id, advertisement);
+                        return advertisement;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error fetching advertisement {Id} from backup provider", id);
+                    throw new AdvertisementNotFoundException(id, "Failed to retrieve advertisement from both providers", ex);
+                }
+
+                _logger.LogWarning("Advertisement {Id} not found in any provider", id);
+                return null;
+            }
+            catch (Exception ex) when (ex is not AdvertisementNotFoundException)
+            {
+                _logger.LogError(ex, "Unexpected error retrieving advertisement {Id}", id);
+                throw;
+            }
+        }
+
+        private Task CacheAdvertisement(string id, Advertisement advertisement)
+        {
+            if (advertisement == null) return Task.CompletedTask;
+
+            _logger.LogDebug("Caching advertisement {Id} for {Duration:g}", id, _options.CacheDuration);
+            return _cache.SetAsync(id, advertisement, _options.CacheDuration);
+        }
+    }
+
+    public class AdvertisementNotFoundException : Exception
+    {
+        public string AdvertisementId { get; }
+
+        public AdvertisementNotFoundException(string id, string message, Exception innerException)
+            : base(message, innerException)
+        {
+            AdvertisementId = id;
         }
     }
 }

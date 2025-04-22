@@ -1,0 +1,5 @@
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/ThirdParty/bin/Debug/ThirdParty.dll
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/ThirdParty/bin/Debug/ThirdParty.pdb
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/ThirdParty/obj/Debug/ThirdParty.csproj.CoreCompileInputs.cache
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/ThirdParty/obj/Debug/ThirdParty.dll
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/ThirdParty/obj/Debug/ThirdParty.pdb

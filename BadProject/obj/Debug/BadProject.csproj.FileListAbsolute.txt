@@ -1,0 +1,2 @@
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/BadProject/obj/Debug/BadProject.csproj.AssemblyReference.cache
+/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/BadProject/obj/Debug/BadProject.csproj.CoreCompileInputs.cache

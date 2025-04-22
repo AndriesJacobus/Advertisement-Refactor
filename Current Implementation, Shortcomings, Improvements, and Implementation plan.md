@@ -146,6 +146,115 @@ The current implementation is a caching and failover system for advertisement re
 - Centralizes configuration validation
 - Supports different environments (dev, prod, etc.)
 
+### 6. Concurrency Pattern
+**Why Used:**
+- Ensures thread-safe operations across all components
+- Minimizes lock contention through fine-grained synchronization
+- Enables scalable performance under load
+- Prevents race conditions and data corruption
+- Maintains consistency across distributed operations
+
+## Thread Safety Strategy
+
+### Core Principles
+1. **Minimize Shared State**
+   - Stateless service layer
+   - Immutable configuration
+   - Thread-safe collections where needed
+   - No static mutable state
+
+2. **Fine-grained Synchronization**
+   - Use SemaphoreSlim for async operations
+   - Protect only critical sections
+   - Short-duration locks
+   - Clear lock hierarchies
+
+3. **Thread-safe Components**
+   - MemoryCache with synchronized compound operations
+   - ConcurrentQueue for error tracking
+   - Atomic operations where possible
+   - proper disposal of resources
+
+### Implementation Details
+
+1. **Cache Layer**
+   ```csharp
+   public class MemoryAdvertisementCache : IAdvertisementCache
+   {
+       private readonly MemoryCache _cache;
+       private readonly SemaphoreSlim _semaphore;
+       
+       // Synchronization for compound operations
+       public async Task<Advertisement?> GetAsync(string id)
+       {
+           await _semaphore.WaitAsync();
+           try
+           {
+               // Thread-safe cache operations
+           }
+           finally
+           {
+               _semaphore.Release();
+           }
+       }
+   }
+   ```
+
+2. **Circuit Breaker**
+   ```csharp
+   public class RollingWindowCircuitBreaker : ICircuitBreaker
+   {
+       private readonly ConcurrentQueue<DateTime> _errors;
+       private readonly SemaphoreSlim _cleanupLock;
+       
+       // Thread-safe error tracking
+       private async Task CleanupExpiredErrors()
+       {
+           await _cleanupLock.WaitAsync();
+           try
+           {
+               // Atomic cleanup operations
+           }
+           finally
+           {
+               _cleanupLock.Release();
+           }
+       }
+   }
+   ```
+
+3. **Provider Layer**
+   - Stateless adapters
+   - Thread-safe retry logic
+   - Immutable configuration
+   - Safe error handling
+
+4. **Service Layer**
+   - No shared state
+   - Async/await throughout
+   - Thread-safe dependencies
+   - Safe resource management
+
+### Benefits of This Approach
+
+1. **Scalability**
+   - Minimal contention
+   - Efficient resource usage
+   - No global locks
+   - Async by default
+
+2. **Reliability**
+   - No race conditions
+   - Consistent state
+   - Safe error handling
+   - Proper cleanup
+
+3. **Maintainability**
+   - Clear synchronization patterns
+   - Documented thread safety
+   - Easy to verify
+   - Simple to extend
+
 ## Implementation Plan
 
 1. **Phase 1: Core Abstractions**

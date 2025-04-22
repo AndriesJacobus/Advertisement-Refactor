@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "dgSpecHash": "uEdIwZRQ94M=",
+  "success": true,
+  "projectFilePath": "/Users/ajdp/Documents/Coding Assessments/Confluence_Tech_Test_BadProject/ThirdParty/ThirdParty.csproj",
+  "expectedPackageFiles": [
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.ref/6.0.31/microsoft.netcore.app.ref.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.runtime.win-x64/6.0.31/microsoft.netcore.app.runtime.win-x64.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.runtime.win-x86/6.0.31/microsoft.netcore.app.runtime.win-x86.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.runtime.osx-x64/6.0.31/microsoft.netcore.app.runtime.osx-x64.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.aspnetcore.app.ref/6.0.31/microsoft.aspnetcore.app.ref.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.aspnetcore.app.runtime.win-x64/6.0.31/microsoft.aspnetcore.app.runtime.win-x64.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.aspnetcore.app.runtime.win-x86/6.0.31/microsoft.aspnetcore.app.runtime.win-x86.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.aspnetcore.app.runtime.osx-x64/6.0.31/microsoft.aspnetcore.app.runtime.osx-x64.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.host.win-x64/6.0.31/microsoft.netcore.app.host.win-x64.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.host.win-x86/6.0.31/microsoft.netcore.app.host.win-x86.6.0.31.nupkg.sha512",
+    "/Users/ajdp/.nuget/packages/microsoft.netcore.app.host.osx-x64/6.0.31/microsoft.netcore.app.host.osx-x64.6.0.31.nupkg.sha512"
+  ],
+  "logs": []
+}
